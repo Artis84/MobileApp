@@ -1,0 +1,5 @@
+{
+    "tasks": {
+        "api": "deno run --allow-net --allow-env index.js"
+    }
+}
