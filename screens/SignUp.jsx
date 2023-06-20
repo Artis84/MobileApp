@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, TextInput, Text, Button, StyleSheet } from "react-native";
-import SignUpModels from "../models/SignUp.js";
+import SignUpClientSide from "../models/SignUpClientSide.js";
 
 const SignUp = ({ navigation }) => {
     const [username, setUsername] = useState("");
@@ -11,7 +11,7 @@ const SignUp = ({ navigation }) => {
     const [passwordError, setPasswordError] = useState("");
     const [status, setStatus] = useState("");
 
-    const signUp = new SignUpModels();
+    const signUpClientSide = new SignUpClientSide();
 
     const handleSignUp = async () => {
         try {
@@ -41,7 +41,7 @@ const SignUp = ({ navigation }) => {
             if (response.ok) {
                 const data = await response.json();
                 console.log(data.message);
-                navigation.navigate("Home");
+                navigation.navigate("EmailVerification", { username: username, email: email, password: password });
             } else {
                 clearTimeout(timeoutId);
                 const errorData = await response.json();
@@ -54,7 +54,7 @@ const SignUp = ({ navigation }) => {
     };
 
     const handleUsernameChange = (username) => {
-        if (!signUp.handleUsernameChange(username)) {
+        if (!signUpClientSide.validateUsername(username)) {
             setUsernameError("Username can only contain letters, numbers, -, _");
             setUsername("");
         } else {
@@ -63,8 +63,16 @@ const SignUp = ({ navigation }) => {
         }
     };
 
+    const checkUsernameRecord = async () => {
+        const usernameUniqueness = await signUpClientSide.checkUsernameUniqueness(username);
+        if (!usernameUniqueness) {
+            setUsernameError("The username is already used");
+            setUsername("");
+        }
+    };
+
     const handleEmailChange = (email) => {
-        if (!signUp.handleEmailChange(email)) {
+        if (!signUpClientSide.validateEmail(email)) {
             setEmailError("Please enter a valid email address. email@email.com");
             setEmail("");
         } else {
@@ -73,10 +81,17 @@ const SignUp = ({ navigation }) => {
         }
     };
 
+    const checkEmailUniqueness = async () => {
+        const emailUniqueness = await signUpClientSide.checkEmailUniqueness(email);
+        if (!emailUniqueness) {
+            setEmailError("The email is already used");
+            setEmail("");
+        }
+    };
+
     const handlePasswordChange = (password) => {
-        if (!signUp.handlePasswordChange(password)) {
+        if (!signUpClientSide.validatePassword(password)) {
             setPasswordError("Password must have at least 12 characters, one uppercase letter, one special character(@$!%*?&), and one digit.");
-            setPassword("");
         } else {
             setPasswordError("");
             setPassword(password);
@@ -85,32 +100,36 @@ const SignUp = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <TextInput name="username" style={styles.input} placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
+            <TextInput name="username" style={[styles.input, usernameError ? styles.errorInput : null]} placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
             {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
             <TextInput
                 name="email"
                 style={[styles.input, emailError ? styles.errorInput : null]}
                 placeholder="Email"
                 onChangeText={handleEmailChange}
+                onFocus={checkUsernameRecord}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                editable={!username.length == 0}
             />
             {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             <TextInput
                 name="password"
                 style={[styles.input, passwordError ? styles.errorInput : null]}
+                disabled={!email}
                 placeholder="Password"
                 secureTextEntry={true}
                 maxLength={20}
                 onChangeText={handlePasswordChange}
+                onFocus={checkEmailUniqueness}
+                editable={!email.length == 0}
             />
             {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            <Button title="Sign Up" onPress={handleSignUp} disabled={!username || !email || !password} />
+            <Button title="Sign Up" onPress={handleSignUp} disabled={!username || !email || !password || !status.length == 0} />
             {status ? <Text style={styles.errorText}>{status}</Text> : null}
         </View>
     );
 };
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
