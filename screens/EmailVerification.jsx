@@ -1,23 +1,53 @@
-import React, { useState, useEffect } from "react";
-import { View, TextInput, Text, Button, StyleSheet, Modal } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, TextInput, Text, Button, StyleSheet, Animated } from "react-native";
+import InfoModal from "../components/InfoModal";
 
 const EmailVerification = ({ navigation, route }) => {
-    const [verificationCode, setverificationCode] = useState("");
+    const [verificationCode, setVerificationCode] = useState(["", "", "", "", "", "", ""]);
     const [verificationStatus, setVerificationStatus] = useState("");
-    const [showPopUp, setShowPopUp] = useState(false);
-    const { username, email, password } = route.params;
+    const [IsCodeOnProgress, setIsCodeOnProgress] = useState(true);
+    const [showResendPopUp, setshowResendPopUp] = useState(false);
+    const [showConfirmationPopUp, setshowConfirmationPopUp] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(null);
+    const inputRefs = useRef([]);
+    const { email } = route.params;
 
-    const handleVerificationCodeChange = (verificationCode) => {
-        setverificationCode(verificationCode);
+    const handleVerificationCodeChange = (text, index) => {
+        setVerificationCode((prevValues) => {
+            const newVerificationCode = [...prevValues];
+
+            // Set the blue border on the current active input when deleting numbers
+
+            if (text.length === 1 && index < 6) {
+                newVerificationCode[index] = text;
+                // Move focus to the next input if it's empty
+                const nextEmptyIndex = newVerificationCode.findIndex((newVerificationCode) => !newVerificationCode);
+                if (nextEmptyIndex !== -1) {
+                    inputRefs.current[nextEmptyIndex].focus();
+                }
+                if (nextEmptyIndex === 6) setIsCodeOnProgress(false);
+            } else if (text.length === 0 && index > 0) {
+                setIsCodeOnProgress(true);
+                // Move focus to the previous input
+                inputRefs.current[index - 1].focus();
+                inputRefs.current[index - 1].clear();
+                newVerificationCode[index - 1] = text;
+            }
+            if (index === 6) {
+                newVerificationCode[index] = "";
+            }
+            return newVerificationCode;
+        });
     };
-    const handleSubmit = async () => {
+
+    const handleSubmitCode = async () => {
+        setshowConfirmationPopUp(false);
+        const verificationCodeInt = parseInt(verificationCode.join(""));
         try {
             // Create the form data
             const formData = new FormData();
-            formData.append("username", username);
             formData.append("email", email);
-            formData.append("password", password);
-            formData.append("verificationCode", verificationCode);
+            formData.append("verificationCode", verificationCodeInt);
 
             const controller = new AbortController();
             const timeout = 10000;
@@ -37,65 +67,147 @@ const EmailVerification = ({ navigation, route }) => {
 
             // Check the response status
             if (response.ok) {
-                const data = await response.json();
-                console.log(data.message);
-                setShowPopUp(true);
+                setshowConfirmationPopUp(true);
             } else {
                 clearTimeout(timeoutId);
-                const errorData = await response.json();
-                throw new Error(errorData.error);
+                const error = await response.json();
+                if (error.failed) setVerificationStatus("Wrong code, please try again");
+                else throw new Error(error.error);
             }
         } catch (error) {
             console.error(error);
-            setVerificationStatus("Wrong code, please try again");
+            setVerificationStatus("Verification failed, please try again");
         }
     };
 
-    useEffect(() => {
-        if (showPopUp) {
-            setTimeout(() => {
-                navigation.navigate("Home");
-            }, 2000);
+    const handleResendCode = async () => {
+        setshowResendPopUp(false);
+        try {
+            // Create the form data
+            const formData = new FormData();
+            formData.append("email", email);
+
+            const controller = new AbortController();
+            const timeout = 10000;
+
+            const timeoutId = setTimeout(() => {
+                controller.abort(); // Abort the request when the timeout is reached
+                throw new Error("TIME OUT IS OVER!");
+            }, timeout);
+
+            // Send the form data to the server
+            const response = await fetch("http://192.168.1.51:8000/resendcode", {
+                signal: controller.signal,
+                method: "POST",
+                body: formData,
+            });
+            clearTimeout(timeoutId);
+
+            // Check the response status
+            if (response.ok) {
+                setshowResendPopUp(true);
+            } else {
+                clearTimeout(timeoutId);
+                const error = await response.json();
+                throw new Error(error.error);
+            }
+        } catch (error) {
+            setVerificationStatus(error);
         }
-    });
+    };
+
     return (
-        <View style={styles.container}>
-            <TextInput style={[styles.input, verificationStatus ? styles.errorInput : null]} placeholder="Enter the code" keyboardType="numeric" onChangeText={handleVerificationCodeChange} />
-            <Button title="Submit" onPress={handleSubmit} />
-            <Modal visible={showPopUp} animationType="slide">
-                <Text style={styles.modalContent}>Account verified</Text>
-            </Modal>
-            {verificationStatus ? <Text style={styles.errorText}>{verificationStatus}</Text> : null}
-        </View>
+        <>
+            <View style={styles.container}>
+                <Text>Please enter the code received in your email box below</Text>
+                <View style={styles.inputContainer}>
+                    {[...Array(7)].map((_, index) => (
+                        <TextInput
+                            key={index}
+                            ref={(ref) => (inputRefs.current[index] = ref)}
+                            style={[
+                                styles.input,
+                                index === 6 ? styles.hiddenInput : null,
+                                verificationStatus ? styles.errorInput : null,
+                                index === activeIndex ? styles.activeInput : null,
+                                index === activeIndex ? styles.activeInputScaled : null,
+                            ]}
+                            keyboardType="numeric"
+                            maxLength={1}
+                            onChangeText={(text) => handleVerificationCodeChange(text, index)}
+                            onKeyPress={({ nativeEvent }) => {
+                                if (nativeEvent.key === "Backspace") {
+                                    handleVerificationCodeChange("", index);
+                                }
+                            }}
+                            onFocus={() => setActiveIndex(index)}
+                            onPressOut={() => {
+                                handleVerificationCodeChange("", index + 1);
+                                setIsCodeOnProgress(true);
+                            }}
+                            autoFocus={index === 0}
+                            caretHidden
+                        />
+                    ))}
+                </View>
+                <View style={styles.buttonsContainer}>
+                    <Button title="Resend the code" onPress={handleResendCode} />
+                    <Button title="Submit" onPress={handleSubmitCode} disabled={IsCodeOnProgress} />
+                </View>
+                {verificationStatus ? <Text style={styles.status}>{verificationStatus}</Text> : null}
+            </View>
+            {showResendPopUp && <InfoModal content={`The code has been resend on: ${email.substring(0, 4)}..............`} />}
+            {showConfirmationPopUp && <InfoModal content="Your account is now verified🎉" />}
+        </>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        gap: 20,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    inputContainer: {
+        flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
     },
     input: {
-        width: "80%",
-        height: 40,
-        marginVertical: 10,
+        fontSize: 24,
+        width: 50,
+        height: 50,
+        marginHorizontal: 5,
         paddingHorizontal: 10,
         borderColor: "#ccc",
         borderWidth: 1,
         borderRadius: 5,
-    },
-    modalContent: {
         textAlign: "center",
-        color: "black",
+    },
+    activeInput: {
+        borderColor: "blue",
+        transform: [{ scale: 1 }],
+    },
+    activeInputScaled: {
+        transform: [{ scale: 1.15 }],
     },
     errorInput: {
         borderColor: "red",
     },
-    errorText: {
+    buttonsContainer: {
+        flexDirection: "row",
+        gap: 50,
+    },
+    status: {
         color: "red",
         textAlign: "center",
         marginBottom: 10,
+    },
+    hiddenInput: {
+        position: "absolute",
+        top: 99999999,
+        opacity: 0,
     },
 });
 

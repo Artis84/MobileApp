@@ -1,5 +1,5 @@
-import { collection, getDocs, query, where } from "@firebase/firestore";
-import Db from "./DataBase.js";
+import { collection, getDocs, query, where } from "@firebase/firestore/lite";
+import Db from "../database/ClientDataBase.js";
 
 class SignUpClientSide extends Db {
     validateUsername(username) {
@@ -12,20 +12,22 @@ class SignUpClientSide extends Db {
         }
     }
 
-    async checkUsernameRecord(username) {
+    async checkUsernameUniqueness(username) {
         const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("username", "==", username));
-        const querySnapshot = await getDocs(quere);
-        if (!querySnapshot.empty) {
-            return false; // Email already exists
+        const lowercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toLowerCase())));
+        const uppercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toUpperCase())));
+
+        if (!lowercaseQuerySnapshot.empty || !uppercaseQuerySnapshot.empty) {
+            return false;
         }
 
-        return true; // Email is valid and unique
+        return true;
     }
 
     validateEmail(email) {
         // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+        const emailRegex = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9]+\.[a-zA-Z]{2,}$/;
+
         if (!emailRegex.test(email)) {
             return false;
         } else {

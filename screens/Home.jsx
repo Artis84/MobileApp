@@ -1,19 +1,21 @@
-import React, { useState } from "react";
-import { View, TextInput, Button, StyleSheet } from "react-native";
-import SignUpClientSide from "../models/SignUpClientSide.js";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Button, StyleSheet, Animated } from "react-native";
+import LoginClientSide from "../models/LoginClientSide";
+import StatusMark from "../components/StatusMark";
 
 const Home = ({ navigation }) => {
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [emailError, setEmailError] = useState("");
     const [status, setStatus] = useState("");
+    const [translateYInput] = useState(new Animated.Value(0));
 
     const handleSubmit = async () => {
         try {
             // Create the form data
             const formData = new FormData();
-            formData.append("username", username);
+            formData.append("email", email);
             formData.append("password", password);
 
             const controller = new AbortController();
@@ -25,7 +27,7 @@ const Home = ({ navigation }) => {
             }, timeout);
 
             // Send the form data to the server
-            const response = await fetch("http://192.168.1.51:8000/signup", {
+            const response = await fetch("http://192.168.1.51:8000/login", {
                 signal: controller.signal,
                 method: "POST",
                 body: formData,
@@ -38,35 +40,48 @@ const Home = ({ navigation }) => {
                 console.log(data.message);
             } else {
                 clearTimeout(timeoutId);
-                const errorData = await response.json();
-                throw new Error(errorData.error);
+                const error = await response.json();
+                if (error.unknowEmail) setEmailError(`${error.unknowEmail}`);
+                else if (error.VerifiedError) navigation.navigate("EmailVerification", { email: email });
+                else throw new Error(error.error);
             }
         } catch (error) {
             console.error(error);
-            setStatus("Signup failed. Please try again.");
+            setStatus("Login failed. Please try again.");
         }
     };
 
-    const handleUsernameChange = async (username) => {
-        const SignUpClientSide = new SignUpClientSide();
-        const checkUsernameRecord = await SignUpClientSide.checkUsernameRecord(username);
-        if (!checkUsernameRecord) {
-            setUsernameError("Username does not existed ");
-            setUsername("");
+    const loginClientSide = new LoginClientSide();
+
+    const handleEmailChange = (email) => {
+        if (!loginClientSide.validateEmail(email)) {
+            setEmailError("Please enter a valid email address. email@email.com");
+            setEmail("");
         } else {
-            setUsernameError("");
-            setUsername(username);
+            setEmailError("");
+            setEmail(email);
         }
     };
 
     const handlePasswordChange = (password) => {
-        if (!signUpClientSide.validatePassword(password)) {
+        if (!loginClientSide.validatePassword(password)) {
             setPasswordError("Password must have at least 12 characters, one uppercase letter, one special character(@$!%*?&), and one digit.");
+            setPassword("");
         } else {
             setPasswordError("");
             setPassword(password);
         }
     };
+
+    useEffect(() => {
+        if (email) {
+            Animated.timing(translateYInput, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [email]);
 
     const handleSignUp = () => {
         navigation.navigate("SignUp");
@@ -74,9 +89,33 @@ const Home = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <TextInput style={styles.input} placeholder="Email" />
-            <TextInput style={styles.input} placeholder="Password" secureTextEntry={true} />
-            <Button title="Connect" onPress={handleSubmit} />
+            <View style={[styles.input, emailError ? styles.errorInput : null]}>
+                <TextInput placeholder="Email" autoCapitalize="none" keyboardType="email-address" onChangeText={handleEmailChange} />
+                <StatusMark valid={email} invalid={emailError} />
+            </View>
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            <Animated.View
+                style={[
+                    styles.input,
+                    passwordError ? styles.errorInput : null,
+                    {
+                        transform: [
+                            {
+                                translateY: translateYInput.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-20, 0], // Adjust the outputRange values for larger translation
+                                }),
+                            },
+                        ],
+                        opacity: translateYInput,
+                    },
+                ]}>
+                <TextInput placeholder="Password" onChangeText={handlePasswordChange} secureTextEntry={true} />
+                <StatusMark valid={password} invalid={passwordError} />
+            </Animated.View>
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+            <Button title="Connect" onPress={handleSubmit} disabled={!email || !password} />
+            {status ? <Text style={styles.errorText}>{status}</Text> : null}
             <View style={styles.buttonContainer}>
                 <View style={styles.button}>
                     <Button title="Sign Up" onPress={handleSignUp} />
@@ -97,6 +136,7 @@ const styles = StyleSheet.create({
     },
     input: {
         width: "80%",
+        // padding: 5,
         height: 40,
         marginVertical: 10,
         paddingHorizontal: 10,
@@ -111,6 +151,14 @@ const styles = StyleSheet.create({
     buttonContainer: {
         alignSelf: "flex-end",
         marginTop: 50,
+    },
+    errorInput: {
+        borderColor: "red",
+    },
+    errorText: {
+        color: "red",
+        textAlign: "center",
+        marginBottom: 10,
     },
 });
 

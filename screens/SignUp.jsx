@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { View, TextInput, Text, Button, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, TextInput, Text, Button, StyleSheet, Animated } from "react-native";
 import SignUpClientSide from "../models/SignUpClientSide.js";
+import StatusMark from "../components/StatusMark.jsx";
 
 const SignUp = ({ navigation }) => {
     const [username, setUsername] = useState("");
@@ -10,6 +11,8 @@ const SignUp = ({ navigation }) => {
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [status, setStatus] = useState("");
+    const [translateYInputEmail] = useState(new Animated.Value(0));
+    const [translateYInputPassword] = useState(new Animated.Value(0));
 
     const signUpClientSide = new SignUpClientSide();
 
@@ -40,22 +43,34 @@ const SignUp = ({ navigation }) => {
             // Check the response status
             if (response.ok) {
                 const data = await response.json();
-                console.log(data.message);
-                navigation.navigate("EmailVerification", { username: username, email: email, password: password });
+                console.log(data.successful);
+                navigation.navigate("EmailVerification", { email: email });
             } else {
                 clearTimeout(timeoutId);
-                const errorData = await response.json();
-                throw new Error(errorData.error);
+                const error = await response.json();
+                if (error.failed) setStatus("Signup failed, invalid data.");
+                else throw new Error(error.error);
             }
         } catch (error) {
             console.error(error);
-            setStatus("Signup failed. Please try again.");
+            setStatus("Signup failed, please try again.");
         }
     };
 
     const handleUsernameChange = (username) => {
+        setStatus("");
         if (!signUpClientSide.validateUsername(username)) {
-            setUsernameError("Username can only contain letters, numbers, -, _");
+            setUsernameError("Username must contain 1 letter / numbers.");
+            setUsername("");
+        } else {
+            checkUsernameUniqueness(username);
+        }
+    };
+
+    const checkUsernameUniqueness = async (username) => {
+        const usernameUniqueness = await signUpClientSide.checkUsernameUniqueness(username);
+        if (!usernameUniqueness) {
+            setUsernameError("The username is already used");
             setUsername("");
         } else {
             setUsernameError("");
@@ -63,17 +78,20 @@ const SignUp = ({ navigation }) => {
         }
     };
 
-    const checkUsernameRecord = async () => {
-        const usernameUniqueness = await signUpClientSide.checkUsernameUniqueness(username);
-        if (!usernameUniqueness) {
-            setUsernameError("The username is already used");
-            setUsername("");
+    const handleEmailChange = (email) => {
+        setStatus("");
+        if (!signUpClientSide.validateEmail(email)) {
+            setEmailError("Please enter a valid email address. email@email.com");
+            setEmail("");
+        } else {
+            checkEmailUniqueness(email);
         }
     };
 
-    const handleEmailChange = (email) => {
-        if (!signUpClientSide.validateEmail(email)) {
-            setEmailError("Please enter a valid email address. email@email.com");
+    const checkEmailUniqueness = async (email) => {
+        const emailUniqueness = await signUpClientSide.checkEmailUniqueness(email);
+        if (!emailUniqueness) {
+            setEmailError("The email is already used");
             setEmail("");
         } else {
             setEmailError("");
@@ -81,51 +99,82 @@ const SignUp = ({ navigation }) => {
         }
     };
 
-    const checkEmailUniqueness = async () => {
-        const emailUniqueness = await signUpClientSide.checkEmailUniqueness(email);
-        if (!emailUniqueness) {
-            setEmailError("The email is already used");
-            setEmail("");
-        }
-    };
-
     const handlePasswordChange = (password) => {
+        setStatus("");
         if (!signUpClientSide.validatePassword(password)) {
-            setPasswordError("Password must have at least 12 characters, one uppercase letter, one special character(@$!%*?&), and one digit.");
+            setPasswordError("Password must have at least 12 characters, one uppercase letter, one special character(@ $ ! % * ? &), and one digit.");
+            setPassword("");
         } else {
             setPasswordError("");
             setPassword(password);
         }
     };
 
+    useEffect(() => {
+        if (username) {
+            Animated.timing(translateYInputEmail, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }).start();
+        }
+        if (email) {
+            Animated.timing(translateYInputPassword, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [username, email]);
+
     return (
         <View style={styles.container}>
-            <TextInput name="username" style={[styles.input, usernameError ? styles.errorInput : null]} placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
+            <View style={[styles.input, usernameError ? styles.errorInput : null]}>
+                <TextInput name="username" placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
+                <StatusMark valid={username} invalid={usernameError} />
+            </View>
             {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
-            <TextInput
-                name="email"
-                style={[styles.input, emailError ? styles.errorInput : null]}
-                placeholder="Email"
-                onChangeText={handleEmailChange}
-                onFocus={checkUsernameRecord}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!username.length == 0}
-            />
+            <Animated.View
+                style={[
+                    styles.input,
+                    emailError ? styles.errorInput : null,
+                    {
+                        transform: [
+                            {
+                                translateY: translateYInputEmail.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-20, 0],
+                                }),
+                            },
+                        ],
+                        opacity: translateYInputEmail,
+                    },
+                ]}>
+                <TextInput name="email" placeholder="Email" onChangeText={handleEmailChange} autoCapitalize="none" keyboardType="email-address" />
+                <StatusMark valid={email} invalid={emailError} />
+            </Animated.View>
             {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            <TextInput
-                name="password"
-                style={[styles.input, passwordError ? styles.errorInput : null]}
-                disabled={!email}
-                placeholder="Password"
-                secureTextEntry={true}
-                maxLength={20}
-                onChangeText={handlePasswordChange}
-                onFocus={checkEmailUniqueness}
-                editable={!email.length == 0}
-            />
+            <Animated.View
+                style={[
+                    styles.input,
+                    passwordError ? styles.errorInput : null,
+                    {
+                        transform: [
+                            {
+                                translateY: translateYInputPassword.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-20, 0],
+                                }),
+                            },
+                        ],
+                        opacity: translateYInputPassword,
+                    },
+                ]}>
+                <TextInput name="password" placeholder="Password" secureTextEntry={true} maxLength={20} onChangeText={handlePasswordChange} />
+                <StatusMark valid={password} invalid={passwordError} />
+            </Animated.View>
             {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            <Button title="Sign Up" onPress={handleSignUp} disabled={!username || !email || !password || !status.length == 0} />
+            {username && email && password ? <Button title="Sign Up" onPress={handleSignUp} /> : null}
             {status ? <Text style={styles.errorText}>{status}</Text> : null}
         </View>
     );
