@@ -10,7 +10,8 @@ const EmailVerification = ({ navigation, route }) => {
     const [showConfirmationPopUp, setshowConfirmationPopUp] = useState(false);
     const [activeIndex, setActiveIndex] = useState(null);
     const inputRefs = useRef([]);
-    const { email } = route.params;
+    const { email, action, codeLengh } = route.params;
+    const realCodeLengh = codeLengh - 1;
 
     const handleVerificationCodeChange = (text, index) => {
         setVerificationCode((prevValues) => {
@@ -18,14 +19,14 @@ const EmailVerification = ({ navigation, route }) => {
 
             // Set the blue border on the current active input when deleting numbers
 
-            if (text.length === 1 && index < 6) {
+            if (text.length === 1 && index < realCodeLengh) {
                 newVerificationCode[index] = text;
                 // Move focus to the next input if it's empty
                 const nextEmptyIndex = newVerificationCode.findIndex((newVerificationCode) => !newVerificationCode);
                 if (nextEmptyIndex !== -1) {
                     inputRefs.current[nextEmptyIndex].focus();
                 }
-                if (nextEmptyIndex === 6) setIsCodeOnProgress(false);
+                if (nextEmptyIndex === realCodeLengh) setIsCodeOnProgress(false);
             } else if (text.length === 0 && index > 0) {
                 setIsCodeOnProgress(true);
                 // Move focus to the previous input
@@ -33,7 +34,7 @@ const EmailVerification = ({ navigation, route }) => {
                 inputRefs.current[index - 1].clear();
                 newVerificationCode[index - 1] = text;
             }
-            if (index === 6) {
+            if (index === realCodeLengh) {
                 newVerificationCode[index] = "";
             }
             return newVerificationCode;
@@ -72,7 +73,7 @@ const EmailVerification = ({ navigation, route }) => {
                 clearTimeout(timeoutId);
                 const error = await response.json();
                 if (error.failed) setVerificationStatus("Wrong code, please try again");
-                else throw new Error(error.error);
+                else throw new Error();
             }
         } catch (error) {
             console.error(error);
@@ -82,10 +83,15 @@ const EmailVerification = ({ navigation, route }) => {
 
     const handleResendCode = async () => {
         setshowResendPopUp(false);
+        const startingNumber = 0.1 * Math.pow(10, realCodeLengh);
+        const endingNumber = 0.9 * Math.pow(10, realCodeLengh);
+        const verificationCode = Math.floor(startingNumber + Math.random() * endingNumber);
+
         try {
             // Create the form data
             const formData = new FormData();
             formData.append("email", email);
+            formData.append("verificationCode", verificationCode);
 
             const controller = new AbortController();
             const timeout = 10000;
@@ -108,11 +114,11 @@ const EmailVerification = ({ navigation, route }) => {
                 setshowResendPopUp(true);
             } else {
                 clearTimeout(timeoutId);
-                const error = await response.json();
-                throw new Error(error.error);
+                throw new Error("The email has not been sent, please try again");
             }
         } catch (error) {
-            setVerificationStatus(error);
+            console.error(error);
+            setVerificationStatus("The email has not been sent, please try again");
         }
     };
 
@@ -121,13 +127,13 @@ const EmailVerification = ({ navigation, route }) => {
             <View style={styles.container}>
                 <Text>Please enter the code received in your email box below</Text>
                 <View style={styles.inputContainer}>
-                    {[...Array(7)].map((_, index) => (
+                    {[...Array(codeLengh)].map((_, index) => (
                         <TextInput
                             key={index}
                             ref={(ref) => (inputRefs.current[index] = ref)}
                             style={[
                                 styles.input,
-                                index === 6 ? styles.hiddenInput : null,
+                                index === realCodeLengh ? styles.hiddenInput : null,
                                 verificationStatus ? styles.errorInput : null,
                                 index === activeIndex ? styles.activeInput : null,
                                 index === activeIndex ? styles.activeInputScaled : null,
@@ -156,8 +162,8 @@ const EmailVerification = ({ navigation, route }) => {
                 </View>
                 {verificationStatus ? <Text style={styles.status}>{verificationStatus}</Text> : null}
             </View>
-            {showResendPopUp && <InfoModal content={`The code has been resend on: ${email.substring(0, 4)}..............`} />}
-            {showConfirmationPopUp && <InfoModal content="Your account is now verified🎉" />}
+            {showResendPopUp && <InfoModal content={`The code has been resend on: ${email.substring(0, 4)}...`} action={undefined} params={undefined} />}
+            {showConfirmationPopUp && <InfoModal content="Your account is now verified🎉" action={action} params={action} />}
         </>
     );
 };

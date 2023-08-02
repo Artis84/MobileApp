@@ -1,5 +1,4 @@
 import { addDoc, collection, updateDoc, deleteField, getDocs, where, query, Timestamp } from "@firebase/firestore/lite";
-import { SMTPClient } from "denomailer";
 import Db from "../../database/ServerDataBase.js";
 
 class SignUpServerSide extends Db {
@@ -57,83 +56,20 @@ class SignUpServerSide extends Db {
         }
     }
 
-    async sendVerificationEmail(email, verificationCode) {
-        const client = new SMTPClient({
-            connection: {
-                hostname: "smtp.gmail.com",
-                port: 465,
-                tls: true,
-                auth: {
-                    username: "lopsta10@gmail.com",
-                    password: "erfmttphrorqqxho",
-                },
-            },
-        });
-        await client.send({
-            from: "jaivraimentpasdargent@gmail.com",
-            to: email,
-            subject: "Verifiaction code",
-            content: `Your verification code is ${verificationCode}`,
-            html: `Your verification code is <i>${verificationCode}</i><br /><br />You have 24 hours to verify your account before the delation `,
-        });
-        console.log(`Email sent on: ${email}`);
-        await client.close();
-    }
-
-    async emailVerification(email, verificationCode) {
+    async persistUserData(email, verificationCode, password, username) {
         const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(quere);
+        const expirationTime = new Date();
+        expirationTime.setHours(expirationTime.getHours() + 24);
 
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        const OriginalverificationCode = userData.verification_code;
-
-        if (OriginalverificationCode == verificationCode) return true;
-
-        return false;
-    }
-
-    async persistResendcode(email, verificationCode) {
-        const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(quere);
-        const userDoc = querySnapshot.docs[0];
-        const docRef = userDoc.ref;
-
-        await updateDoc(docRef, {
+        const doc = await addDoc(usersRef, {
+            isAdmin: false,
+            username: username,
+            email: email,
+            password: password,
             verification_code: verificationCode,
+            expirationTime: Timestamp.fromDate(expirationTime),
         });
-        console.log(`Resend code: ${docRef.id}`);
-    }
-
-    // TODO MOVE THE FIRST IF STATEMENT AND CREATE A METHODE
-    async persistUserData(email = "", verificationCode = "", password = "", username = "") {
-        const usersRef = collection(this.db, "users");
-        if (!verificationCode) {
-            const quere = query(usersRef, where("email", "==", email));
-            const querySnapshot = await getDocs(quere);
-            const userDoc = querySnapshot.docs[0];
-            const docRef = userDoc.ref;
-
-            await updateDoc(docRef, {
-                verification_code: deleteField(),
-            });
-            console.log(`Account verified, account password saved: ${docRef.id}`);
-        } else {
-            const expirationTime = new Date();
-            expirationTime.setHours(expirationTime.getHours() + 24);
-
-            const doc = await addDoc(usersRef, {
-                isAdmin: false,
-                username: username,
-                email: email,
-                password: password,
-                verification_code: verificationCode,
-                expirationTime: Timestamp.fromDate(expirationTime),
-            });
-            console.log(`Email, username and verification_code(temporary) saved in the db: ${doc.id}`);
-        }
+        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + ` Email, username and verification_code(temporary) saved: ${doc.id}`);
     }
 }
 

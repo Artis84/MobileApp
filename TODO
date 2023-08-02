@@ -1,2 +1,2 @@
-☐ Divide index into 3 route files: Signup Login EmailVerification
-☐ Create a logger class for loggin some shit in the server/client logs
+✔ Divide index into 3 route files: Signup Login EmailVerification @done(23-07-25 00:06)
+✔ Create a logger class for loggin some shit in the server/client logs @done(23-07-25 00:31)

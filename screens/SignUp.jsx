@@ -15,6 +15,10 @@ const SignUp = ({ navigation }) => {
     const [translateYInputPassword] = useState(new Animated.Value(0));
 
     const signUpClientSide = new SignUpClientSide();
+    const action = {
+        path: "Home",
+        email: undefined,
+    };
 
     const handleSignUp = async () => {
         try {
@@ -42,17 +46,15 @@ const SignUp = ({ navigation }) => {
 
             // Check the response status
             if (response.ok) {
-                const data = await response.json();
-                console.log(data.successful);
-                navigation.navigate("EmailVerification", { email: email });
+                navigation.navigate("EmailVerification", { email: email, codeLengh: 7, action: action });
             } else {
                 clearTimeout(timeoutId);
                 const error = await response.json();
                 if (error.failed) setStatus("Signup failed, invalid data.");
-                else throw new Error(error.error);
+                else throw new Error("Signup failed, please try again");
             }
         } catch (error) {
-            console.error(error);
+            console.error();
             setStatus("Signup failed, please try again.");
         }
     };

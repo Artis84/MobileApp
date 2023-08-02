@@ -10,6 +10,10 @@ const Home = ({ navigation }) => {
     const [emailError, setEmailError] = useState("");
     const [status, setStatus] = useState("");
     const [translateYInput] = useState(new Animated.Value(0));
+    const action = {
+        path: "Home",
+        email: undefined,
+    };
 
     const handleSubmit = async () => {
         try {
@@ -36,14 +40,13 @@ const Home = ({ navigation }) => {
 
             // Check the response status
             if (response.ok) {
-                const data = await response.json();
-                console.log(data.message);
+                console.log("Connected");
             } else {
                 clearTimeout(timeoutId);
                 const error = await response.json();
-                if (error.unknowEmail) setEmailError(`${error.unknowEmail}`);
-                else if (error.VerifiedError) navigation.navigate("EmailVerification", { email: email });
-                else throw new Error(error.error);
+                if (error.unknowEmail) setEmailError("Unknow email");
+                else if (error.VerifiedError) navigation.navigate("EmailVerification", { email: email, codeLengh: 7, action });
+                else throw new Error("Login failed. Please try again");
             }
         } catch (error) {
             console.error(error);
@@ -87,6 +90,10 @@ const Home = ({ navigation }) => {
         navigation.navigate("SignUp");
     };
 
+    const handleForgotPassword = () => {
+        navigation.navigate("ForgotPassword");
+    };
+
     return (
         <View style={styles.container}>
             <View style={[styles.input, emailError ? styles.errorInput : null]}>
@@ -121,7 +128,7 @@ const Home = ({ navigation }) => {
                     <Button title="Sign Up" onPress={handleSignUp} />
                 </View>
                 <View style={styles.button}>
-                    <Button title="Forgot Password" onPress={() => {}} />
+                    <Button title="Forgot Password" onPress={handleForgotPassword} />
                 </View>
             </View>
         </View>

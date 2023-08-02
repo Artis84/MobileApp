@@ -2,8 +2,8 @@
 #
 build/
 .idea
-.gradle
-local.properties
+android/.gradle
+android/local.properties
 *.iml
 *.hprof
 .cxx/
@@ -39,3 +39,6 @@ yarn-error.log
 .metro-health-check*
 
 /database
+
+functions\crud-api\2023-07-09T13.17.49_76852
+functions\crud-api\*.log

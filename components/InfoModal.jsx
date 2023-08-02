@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, Modal, StyleSheet, Button } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
-const InfoModal = ({ content }) => {
-    const [modalVisible, setModalVisible] = useState(true);
+const InfoModal = ({ content, action, params }) => {
+    const navigation = useNavigation();
+    const [modalVisibility, setModalVisibility] = useState(true);
 
     const handleCloseModal = () => {
-        setModalVisible(false);
+        if (action || params) {
+            const path = action.path;
+            const email = params.email;
+            if (path && email) navigation.navigate(path, { email: email });
+            else navigation.navigate(path);
+        } else setModalVisibility(false);
     };
 
     return (
-        <Modal visible={modalVisible} transparent animationType="fade">
+        <Modal visible={modalVisibility} transparent animationType="fade">
             <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalText}>{content}</Text>
