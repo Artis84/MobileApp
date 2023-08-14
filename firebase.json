@@ -6,7 +6,7 @@
         }
     ],
     "firestore": {
-        "rules": "database/firestore.indexes.json",
+        "rules": "database/firestore.rules",
         "indexes": "database/firestore.indexes.json"
     },
     "emulators": {

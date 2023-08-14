@@ -7,12 +7,11 @@ const InfoModal = ({ content, action, params }) => {
     const [modalVisibility, setModalVisibility] = useState(true);
 
     const handleCloseModal = () => {
-        if (action || params) {
-            const path = action.path;
+        if (action && params) {
             const email = params.email;
-            if (path && email) navigation.navigate(path, { email: email });
-            else navigation.navigate(path);
-        } else setModalVisibility(false);
+            navigation.navigate(action, { email: email });
+        } else if (action) navigation.navigate(action);
+        else setModalVisibility(false);
     };
 
     return (

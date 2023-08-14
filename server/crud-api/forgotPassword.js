@@ -24,7 +24,7 @@ forgotPassword.post("/forgotPassword", async (ctx) => {
         } else {
             const verificationCode = Math.floor(10000 + Math.random() * 90000);
             await emailVerification.sendVerificationEmail(email, verificationCode);
-            await emailVerification.persistPasswordVerificationCode(email, verificationCode, false);
+            await emailVerification.refreshVerificationCode(email, verificationCode);
             ctx.response.status = 200;
         }
     } catch (error) {

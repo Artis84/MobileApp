@@ -23,18 +23,26 @@ loginRouter.post("/login", async (ctx) => {
             return;
         }
 
-        const checkAccountVerification = await loginServerSide.checkAccountVerification(email);
-        if (!checkAccountVerification) {
+        const isAccountVerified = await loginServerSide.checkAccountVerification(email);
+        if (!isAccountVerified) {
             const verificationCode = Math.floor(100000 + Math.random() * 900000);
             await emailVerification.sendVerificationEmail(email, verificationCode);
-            await emailVerification.persistVerificationCode(email, verificationCode);
+            await emailVerification.refreshVerificationCode(email, verificationCode);
 
             ctx.response.status = 400;
             ctx.response.body = { VerifiedError: `Account not verified` };
             ctx.response.headers.set("Content-Type", "application/json");
-        } else {
-            ctx.response.status = 200;
+            return;
         }
+        const checkPasswordRecord = await loginServerSide.checkPasswordRecord(email, password);
+        if (!checkPasswordRecord) {
+            ctx.response.status = 400;
+            ctx.response.body = { unknowPassword: `Unknow password` };
+            ctx.response.headers.set("Content-Type", "application/json");
+            return;
+        }
+
+        ctx.response.status = 200;
     } catch (error) {
         console.error("\x1b[31m" + "[CRUD]" + "\x1b[0m" + " " + error);
         ctx.response.status = 500;

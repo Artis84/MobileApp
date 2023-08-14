@@ -1,9 +1,9 @@
-import { addDoc, collection, updateDoc, deleteField, getDocs, where, query, Timestamp } from "@firebase/firestore/lite";
+import { addDoc, collection, getDocs, where, query } from "@firebase/firestore/lite";
 import Db from "../../database/ServerDataBase.js";
 
 class SignUpServerSide extends Db {
     validateUsername(username) {
-        const usernameRegex = /^[a-zA-Z0-9-_]{1,20}$/; // Regex pattern to allow letters, numbers, hyphens, and underscores
+        const usernameRegex = /^[a-zA-Z0-9-_]{1,20}$/;
 
         if (!usernameRegex.test(username)) {
             return false;
@@ -14,10 +14,11 @@ class SignUpServerSide extends Db {
 
     async checkUsernameUniqueness(username) {
         const usersRef = collection(this.db, "users");
-        const lowercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toLowerCase())));
-        const uppercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toUpperCase())));
+        const lowercaseUsername = username.toLowerCase();
+        const uppercaseUsername = username.toUpperCase();
+        const usernameQuerySnapshot = await getDocs(query(usersRef, where("username", "in", [lowercaseUsername, uppercaseUsername])));
 
-        if (!lowercaseQuerySnapshot.empty || !uppercaseQuerySnapshot.empty) {
+        if (!usernameQuerySnapshot.empty) {
             return false;
         }
 
@@ -40,10 +41,10 @@ class SignUpServerSide extends Db {
         const quere = query(usersRef, where("email", "==", email));
         const querySnapshot = await getDocs(quere);
         if (!querySnapshot.empty) {
-            return false; // Email already exists
+            return false;
         }
 
-        return true; // Email is valid and unique
+        return true;
     }
 
     validatePassword(password) {
@@ -56,20 +57,17 @@ class SignUpServerSide extends Db {
         }
     }
 
-    async persistUserData(email, verificationCode, password, username) {
+    async persistUserData(email, password, username) {
         const usersRef = collection(this.db, "users");
-        const expirationTime = new Date();
-        expirationTime.setHours(expirationTime.getHours() + 24);
 
+        const lowercaseUsername = username.toLowerCase();
         const doc = await addDoc(usersRef, {
             isAdmin: false,
-            username: username,
+            usernames: [username, lowercaseUsername],
             email: email,
             password: password,
-            verification_code: verificationCode,
-            expirationTime: Timestamp.fromDate(expirationTime),
         });
-        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + ` Email, username and verification_code(temporary) saved: ${doc.id}`);
+        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + ` Email, username and password saved: ${doc.id}`);
     }
 }
 

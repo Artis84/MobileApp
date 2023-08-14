@@ -1,21 +1,20 @@
 import React, { useState } from "react";
 import { View, TextInput, Text, Button, StyleSheet } from "react-native";
 import StatusMark from "../components/StatusMark.jsx";
-import InfoModal from "../components/InfoModal";
 import LoginClientSide from "../models/LoginClientSide.js";
+import Spinner from "../components/Spinner";
 
 const SignUp = ({ navigation }) => {
     const [email, setEmail] = useState("");
     const [emailError, setEmailError] = useState("");
     const [status, setStatus] = useState("");
-    const [showSendEmailPopUp, setShowSendEmailPopUp] = useState(false);
-    const action = {
-        path: "RefreshPassword",
+    const [loading, setLoading] = useState(false);
+    const param = {
         email: email,
     };
 
     const handleSendEmail = async () => {
-        setShowSendEmailPopUp(false);
+        setLoading(true);
         try {
             // Create the form data
             const formData = new FormData();
@@ -35,11 +34,12 @@ const SignUp = ({ navigation }) => {
                 method: "POST",
                 body: formData,
             });
+            setLoading(false);
             clearTimeout(timeoutId);
 
             // Check the response status
             if (response.ok) {
-                navigation.navigate("EmailVerification", { email: email, action: action, codeLengh: 6 });
+                navigation.navigate("Verification", { email: email, action: "RefreshPassword", params: param, codeLengh: 6 });
             } else {
                 clearTimeout(timeoutId);
                 const error = await response.json();
@@ -47,6 +47,7 @@ const SignUp = ({ navigation }) => {
                 else throw new Error("Signup failed, please try again");
             }
         } catch (error) {
+            setLoading(false);
             console.error(error);
             setStatus("Signup failed, please try again.");
         }
@@ -65,6 +66,7 @@ const SignUp = ({ navigation }) => {
 
     return (
         <>
+            {loading && <Spinner />}
             <View style={styles.container}>
                 <Text>Enter your email account bellow</Text>
                 <View style={[styles.input, emailError ? styles.errorInput : null]}>
@@ -75,7 +77,6 @@ const SignUp = ({ navigation }) => {
                 <Button title="Send" onPress={handleSendEmail} disabled={!email} />
                 {status ? <Text style={styles.errorText}>{status}</Text> : null}
             </View>
-            {showSendEmailPopUp && <InfoModal content={"The email has been send successfully"} />}
         </>
     );
 };

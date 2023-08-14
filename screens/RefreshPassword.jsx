@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import LoginClientSide from "../models/LoginClientSide";
 import StatusMark from "../components/StatusMark";
 import InfoModal from "../components/InfoModal";
+import Spinner from "../components/Spinner";
 
 const RefreshPassword = ({ navigation, route }) => {
     const [password, setPassword] = useState("");
@@ -10,10 +11,12 @@ const RefreshPassword = ({ navigation, route }) => {
     const [repeatPassword, setRepeatPassword] = useState("");
     const [repeatPasswordError, setRepeatPasswordError] = useState("");
     const [showConfirmationPopUp, setshowConfirmationPopUp] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
     const { email } = route.params;
 
     const handleSubmit = async () => {
+        setLoading(true);
         try {
             // Create the form data
             const formData = new FormData();
@@ -34,6 +37,7 @@ const RefreshPassword = ({ navigation, route }) => {
                 method: "POST",
                 body: formData,
             });
+            setLoading(false);
             clearTimeout(timeoutId);
 
             // Check the response status
@@ -46,6 +50,7 @@ const RefreshPassword = ({ navigation, route }) => {
                 else throw new Error("Attempted to refresh the password failed. Please try again");
             }
         } catch (error) {
+            setLoading(false);
             console.error(error);
             setStatus("Attempted to refresh the password failed. Please try again.");
         }
@@ -76,6 +81,7 @@ const RefreshPassword = ({ navigation, route }) => {
 
     return (
         <>
+            {loading && <Spinner />}
             <View style={styles.container}>
                 <View style={[styles.input, passwordError ? styles.errorInput : null]}>
                     <TextInput placeholder="Password" onChangeText={handlePasswordChange} secureTextEntry={true} />

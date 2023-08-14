@@ -10,7 +10,6 @@ signupRouter.post("/signup", async (ctx) => {
     const emailVerification = new EmailVerification();
 
     try {
-        // Get the request body data
         const body = await ctx.request.body().value.read();
         const { username, email, password } = body.fields;
 
@@ -21,10 +20,11 @@ signupRouter.post("/signup", async (ctx) => {
 
         if (signUpServerSide.validateUsername(username) && signUpServerSide.validateEmail(email) && signUpServerSide.validatePassword(password) && emailUniqueness && usernameUniqueness) {
             const verificationCode = Math.floor(100000 + Math.random() * 900000);
-            emailVerification.sendVerificationEmail(email, verificationCode);
-            const saltRounds = await genSalt(); // Number of salt rounds for bcrypt, this number determine the level of strongness encryption
+            const saltRounds = await genSalt();
             const hashedPassword = await hash(password, saltRounds);
-            signUpServerSide.persistUserData(email, verificationCode, hashedPassword, username);
+            await emailVerification.sendVerificationEmail(email, verificationCode);
+            await signUpServerSide.persistUserData(email, hashedPassword, username);
+            await emailVerification.persistVerificationDoc(email, verificationCode);
 
             ctx.response.status = 200;
         } else {

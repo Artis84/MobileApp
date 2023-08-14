@@ -3,7 +3,7 @@ import Db from "../database/ClientDataBase.js";
 
 class SignUpClientSide extends Db {
     validateUsername(username) {
-        const usernameRegex = /^[a-zA-Z0-9-_]{1,20}$/; // Regex pattern to allow letters, numbers, hyphens, and underscores
+        const usernameRegex = /^[a-zA-Z0-9-_]{1,20}$/;
 
         if (!usernameRegex.test(username)) {
             return false;
@@ -14,10 +14,12 @@ class SignUpClientSide extends Db {
 
     async checkUsernameUniqueness(username) {
         const usersRef = collection(this.db, "users");
-        const lowercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toLowerCase())));
-        const uppercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toUpperCase())));
+        const lowercaseUsername = username.toLowerCase();
 
-        if (!lowercaseQuerySnapshot.empty || !uppercaseQuerySnapshot.empty) {
+        // Query for documents where the lowercase username matches the second value in the usernames array
+        const usernameQuerySnapshot = await getDocs(query(usersRef, where("usernames", "array-contains", lowercaseUsername)));
+
+        if (!usernameQuerySnapshot.empty) {
             return false;
         }
 
@@ -25,7 +27,6 @@ class SignUpClientSide extends Db {
     }
 
     validateEmail(email) {
-        // Validate email format
         const emailRegex = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9]+\.[a-zA-Z]{2,}$/;
 
         if (!emailRegex.test(email)) {
@@ -40,14 +41,13 @@ class SignUpClientSide extends Db {
         const quere = query(usersRef, where("email", "==", email));
         const querySnapshot = await getDocs(quere);
         if (!querySnapshot.empty) {
-            return false; // Email already exists
+            return false;
         }
 
-        return true; // Email is valid and unique
+        return true;
     }
 
     validatePassword(password) {
-        // Validate password requirements
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
         if (!passwordRegex.test(password)) {
             return false;

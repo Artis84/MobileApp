@@ -15,14 +15,8 @@ const App = () => {
             <Stack.Navigator>
                 <Stack.Screen name="Home" component={Home} />
                 <Stack.Screen name="SignUp" component={SignUp} />
-                <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-                <Stack.Screen
-                    name="EmailVerification"
-                    component={EmailVerification}
-                    initialParams={{
-                        path: undefined,
-                    }}
-                />
+                <Stack.Screen name="Forgot Password" component={ForgotPassword} />
+                <Stack.Screen name="Verification" component={EmailVerification} />
                 <Stack.Screen name="RefreshPassword" component={RefreshPassword} />
             </Stack.Navigator>
         </NavigationContainer>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, TextInput, Text, Button, StyleSheet, Animated } from "react-native";
 import SignUpClientSide from "../models/SignUpClientSide.js";
 import StatusMark from "../components/StatusMark.jsx";
+import Spinner from "../components/Spinner";
 
 const SignUp = ({ navigation }) => {
     const [username, setUsername] = useState("");
@@ -11,16 +12,14 @@ const SignUp = ({ navigation }) => {
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [status, setStatus] = useState("");
+    const [loading, setLoading] = useState(false);
     const [translateYInputEmail] = useState(new Animated.Value(0));
     const [translateYInputPassword] = useState(new Animated.Value(0));
 
     const signUpClientSide = new SignUpClientSide();
-    const action = {
-        path: "Home",
-        email: undefined,
-    };
 
     const handleSignUp = async () => {
+        setLoading(true);
         try {
             // Create the form data
             const formData = new FormData();
@@ -42,11 +41,12 @@ const SignUp = ({ navigation }) => {
                 method: "POST",
                 body: formData,
             });
+            setLoading(false);
             clearTimeout(timeoutId);
 
             // Check the response status
             if (response.ok) {
-                navigation.navigate("EmailVerification", { email: email, codeLengh: 7, action: action });
+                navigation.navigate("Verification", { email: email, codeLengh: 7, action: "Home" });
             } else {
                 clearTimeout(timeoutId);
                 const error = await response.json();
@@ -54,7 +54,8 @@ const SignUp = ({ navigation }) => {
                 else throw new Error("Signup failed, please try again");
             }
         } catch (error) {
-            console.error();
+            setLoading(false);
+            console.error(error);
             setStatus("Signup failed, please try again.");
         }
     };
@@ -130,55 +131,58 @@ const SignUp = ({ navigation }) => {
     }, [username, email]);
 
     return (
-        <View style={styles.container}>
-            <View style={[styles.input, usernameError ? styles.errorInput : null]}>
-                <TextInput name="username" placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
-                <StatusMark valid={username} invalid={usernameError} />
+        <>
+            {loading && <Spinner />}
+            <View style={styles.container}>
+                <View style={[styles.input, usernameError ? styles.errorInput : null]}>
+                    <TextInput name="username" placeholder="Username" maxLength={20} onChangeText={handleUsernameChange} />
+                    <StatusMark valid={username} invalid={usernameError} />
+                </View>
+                {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
+                <Animated.View
+                    style={[
+                        styles.input,
+                        emailError ? styles.errorInput : null,
+                        {
+                            transform: [
+                                {
+                                    translateY: translateYInputEmail.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-20, 0],
+                                    }),
+                                },
+                            ],
+                            opacity: translateYInputEmail,
+                        },
+                    ]}>
+                    <TextInput name="email" placeholder="Email" onChangeText={handleEmailChange} autoCapitalize="none" keyboardType="email-address" />
+                    <StatusMark valid={email} invalid={emailError} />
+                </Animated.View>
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                <Animated.View
+                    style={[
+                        styles.input,
+                        passwordError ? styles.errorInput : null,
+                        {
+                            transform: [
+                                {
+                                    translateY: translateYInputPassword.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-20, 0],
+                                    }),
+                                },
+                            ],
+                            opacity: translateYInputPassword,
+                        },
+                    ]}>
+                    <TextInput name="password" placeholder="Password" secureTextEntry={true} maxLength={20} onChangeText={handlePasswordChange} />
+                    <StatusMark valid={password} invalid={passwordError} />
+                </Animated.View>
+                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+                {username && email && password ? <Button title="Sign Up" onPress={handleSignUp} /> : null}
+                {status ? <Text style={styles.errorText}>{status}</Text> : null}
             </View>
-            {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
-            <Animated.View
-                style={[
-                    styles.input,
-                    emailError ? styles.errorInput : null,
-                    {
-                        transform: [
-                            {
-                                translateY: translateYInputEmail.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [-20, 0],
-                                }),
-                            },
-                        ],
-                        opacity: translateYInputEmail,
-                    },
-                ]}>
-                <TextInput name="email" placeholder="Email" onChangeText={handleEmailChange} autoCapitalize="none" keyboardType="email-address" />
-                <StatusMark valid={email} invalid={emailError} />
-            </Animated.View>
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            <Animated.View
-                style={[
-                    styles.input,
-                    passwordError ? styles.errorInput : null,
-                    {
-                        transform: [
-                            {
-                                translateY: translateYInputPassword.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [-20, 0],
-                                }),
-                            },
-                        ],
-                        opacity: translateYInputPassword,
-                    },
-                ]}>
-                <TextInput name="password" placeholder="Password" secureTextEntry={true} maxLength={20} onChangeText={handlePasswordChange} />
-                <StatusMark valid={password} invalid={passwordError} />
-            </Animated.View>
-            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            {username && email && password ? <Button title="Sign Up" onPress={handleSignUp} /> : null}
-            {status ? <Text style={styles.errorText}>{status}</Text> : null}
-        </View>
+        </>
     );
 };
 const styles = StyleSheet.create({

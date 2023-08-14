@@ -1,2 +1,6 @@
 ✔ Divide index into 3 route files: Signup Login EmailVerification @done(23-07-25 00:06)
 ✔ Create a logger class for loggin some shit in the server/client logs @done(23-07-25 00:31)
+
+☐ fix this shit:
+const lowercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toLowerCase())));
+const uppercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toUpperCase())));

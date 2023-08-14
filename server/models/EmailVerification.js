@@ -1,8 +1,26 @@
-import { collection, updateDoc, getDocs, where, query, deleteField } from "@firebase/firestore/lite";
+import { collection, updateDoc, getDocs, where, query, Timestamp, doc, addDoc, getDoc, deleteDoc } from "@firebase/firestore/lite";
 import { SMTPClient } from "denomailer";
 import Db from "../../database/ServerDataBase.js";
 
 class EmailVerification extends Db {
+    static async getUserDoc(email) {
+        const db = new Db();
+        const usersRef = collection(db.getDatabase, "users");
+        const userQuere = query(usersRef, where("email", "==", email));
+        const userQuerySnapshot = await getDocs(userQuere);
+        return userQuerySnapshot.docs[0];
+    }
+
+    static async getVerificationDoc(userDoc) {
+        const userData = userDoc.data();
+        const verificationDocId = userData.verification_id;
+
+        const userDocRef = userDoc.ref;
+        const verificationRef = collection(userDocRef, "verification");
+        const verificationDocRef = doc(verificationRef, verificationDocId);
+        return await getDoc(verificationDocRef);
+    }
+
     async sendVerificationEmail(email, verificationCode) {
         const client = new SMTPClient({
             connection: {
@@ -26,47 +44,101 @@ class EmailVerification extends Db {
         await client.close();
     }
 
-    async emailVerification(email, verificationCode) {
-        const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(quere);
+    async isVerificationCodeGood(email, verificationCode) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const verificationDoc = await EmailVerification.getVerificationDoc(userDoc);
 
-        const userDoc = querySnapshot.docs[0];
-        const docRef = userDoc.ref;
-        const userData = userDoc.data();
-        const OriginalverificationCode = userData.verification_code;
+        const verificationData = verificationDoc.data();
+        const originalverificationCode = verificationData.verification_code;
 
-        if (OriginalverificationCode == verificationCode) {
-            console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + ` Account verified: ${docRef.id}`);
-            return true;
-        }
+        if (originalverificationCode == verificationCode) return true;
 
         return false;
     }
 
-    async deleteVerificationCode(email) {
-        const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(quere);
-        const userDoc = querySnapshot.docs[0];
-        const docRef = userDoc.ref;
+    async getUpdatedAttempts(email) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const verificationDoc = await EmailVerification.getVerificationDoc(userDoc);
 
-        await updateDoc(docRef, {
-            verification_code: deleteField(),
-        });
+        const verificationData = verificationDoc.data();
+        const updatedAttemptsCount = (verificationData.attempts += 1);
+        return updatedAttemptsCount;
     }
 
-    async persistVerificationCode(email, verificationCode) {
-        const usersRef = collection(this.db, "users");
-        const quere = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(quere);
-        const userDoc = querySnapshot.docs[0];
-        const docRef = userDoc.ref;
+    async isMaxAttemptsReach(email) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        try {
+            await EmailVerification.getVerificationDoc(userDoc);
+            return false;
+        } catch (error) {
+            return true;
+        }
+    }
 
-        await updateDoc(docRef, {
+    async persistVerificationDoc(email, verificationCode) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const userDocRef = userDoc.ref;
+
+        const verificationRef = collection(userDocRef, "verification");
+        const expirationTime = new Date();
+        const blockedUntil = new Date();
+        expirationTime.setHours(expirationTime.getHours() + 24);
+        blockedUntil.setSeconds(blockedUntil.getSeconds() + 10);
+
+        const verificationDocRef = await addDoc(verificationRef, {
+            verification_code: verificationCode,
+            expiration_time: Timestamp.fromDate(expirationTime),
+            attempts: 0,
+            blocked_until: null,
+        });
+
+        await updateDoc(userDocRef, {
+            verification_id: verificationDocRef.id,
+        });
+        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + `Verification document saved: ${userDocRef.id} -> ${verificationDocRef.id}`);
+    }
+
+    async refreshVerificationCode(email, verificationCode) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const verificationDoc = await EmailVerification.getVerificationDoc(userDoc);
+        const verificationDocRef = verificationDoc.ref;
+        const userDocRef = userDoc.ref;
+
+        await updateDoc(verificationDocRef, {
             verification_code: verificationCode,
         });
-        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + ` Saved verificationCode on: ${docRef.id}`);
+        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + `Verification code refreshed: ${userDocRef.id} -> ${verificationDocRef.id}`);
+    }
+
+    async updateAttemptsCount(email, attempts) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const verificationDoc = await EmailVerification.getVerificationDoc(userDoc);
+        const verificationDocRef = verificationDoc.ref;
+        const userDocRef = userDoc.ref;
+        const verificationData = verificationDoc.data();
+        const attemptsCount = verificationData.attempts;
+
+        const blockedUntil = new Date();
+        blockedUntil.setSeconds(blockedUntil.getSeconds() + 90);
+
+        // I set attempts field on 0 when the max attemps is reach who is 4
+        await updateDoc(verificationDocRef, {
+            attempts: attemptsCount == 4 ? 0 : attempts,
+            blocked_until: Timestamp.fromDate(blockedUntil),
+        });
+        console.log("\x1b[31m" + "[CRUD]" + "\x1b[0m" + `Attempts count updated: ${userDocRef.id} -> ${verificationDocRef.id}`);
+    }
+
+    async resetVerificationDoc(email) {
+        const userDoc = await EmailVerification.getUserDoc(email);
+        const verificationDoc = await EmailVerification.getVerificationDoc(userDoc);
+        const verificationDocRef = verificationDoc.ref;
+
+        await updateDoc(verificationDocRef, {
+            verification_code: null,
+            attempts: 0,
+            blocked_until: null,
+        });
     }
 }
 

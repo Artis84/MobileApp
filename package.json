@@ -4,8 +4,9 @@
     "description": "",
     "main": "index.js",
     "scripts": {
+        "start": "react-native start",
         "android": "react-native run-android",
-        "start": "react-native start"
+        "prod:start": "set ENVFILE=.env.production && react-native start"
     },
     "author": "",
     "license": "ISC",
@@ -28,6 +29,7 @@
     "devDependencies": {
         "@babel/core": "^7.22.5",
         "@babel/runtime": "^7.22.5",
-        "metro-react-native-babel-preset": "^0.76.7"
+        "metro-react-native-babel-preset": "^0.76.7",
+        "react-native-config": "^1.5.1"
     }
 }
