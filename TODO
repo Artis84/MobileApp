@@ -1,6 +1,20 @@
 ✔ Divide index into 3 route files: Signup Login EmailVerification @done(23-07-25 00:06)
 ✔ Create a logger class for loggin some shit in the server/client logs @done(23-07-25 00:31)
 
-☐ fix this shit:
+✔ fix this shit: @done(23-08-18 00:58)
 const lowercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toLowerCase())));
 const uppercaseQuerySnapshot = await getDocs(query(usersRef, where("username", "==", username.toUpperCase())));
+
+✔ Create a sessionId lastLoginAt persist in db and in create cookies @done(23-09-04 15:42)
+
+✔ Fix the postion of the status marks when the email or whetever is too long @started(23-09-07 17:57) @done(23-09-07 21:03) @lasted(3h6m12s)
+✔ In SignUpClientSide there two methode exposing the db @done(23-09-08 13:59)
+☐ Only check input uniqueness when the user is typing and not deleting
+☐ Fix the cloud function for delete accounts
+☐ Put all the route urls in .env
+
+
+☐ delete timeout message error
+☐ Popup state variable need to be string not bool @started(24-09-05 17:30)
+✔ fusion editEmote and editEmoteName to one express server request @done(24-09-04 20:33)
+☐ Rename upload folder to crud folder

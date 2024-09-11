@@ -1,0 +1,29 @@
+{
+    "$schema": "https://deno.land/x/denon@2.5.0/schema.json",
+    "scripts": {
+        "dev": {
+            "cmd": "deno run index.ts",
+            "desc": "run my development crud server",
+            "allow": ["net", "env", "read"],
+            "env": {
+                "DENO_ENV": "development"
+            }
+        },
+        "debug": {
+            "cmd": "deno run --inspect index.ts",
+            "desc": "run my debug crud server",
+            "allow": ["net", "env", "read"],
+            "env": {
+                "DENO_ENV": "production"
+            }
+        },
+        "prod": {
+            "cmd": "deno run index.ts",
+            "desc": "run my production crud server",
+            "allow": ["net", "env", "read"],
+            "env": {
+                "DENO_ENV": "production"
+            }
+        }
+    }
+}

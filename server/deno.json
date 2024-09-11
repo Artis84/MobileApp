@@ -1,8 +1,0 @@
-{
-    "imports": {
-        "@firebase/firestore/lite": "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js",
-        "firebase/app": "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js",
-        "bcrypt": "https://deno.land/x/bcrypt/mod.ts",
-        "denomailer": "https://deno.land/x/denomailer/mod.ts"
-    }
-}

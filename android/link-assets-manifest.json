@@ -1,0 +1,25 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "static/images/default_profil_picture.jpg",
+      "sha1": "c2d13cafbd18781d1684b6759f186abab41ca4ea"
+    },
+    {
+      "path": "static/images/ez.png",
+      "sha1": "9f053ef35c3cc808da64df8d4acca72af3922f8f"
+    },
+    {
+      "path": "static/images/feels_ok_man.png",
+      "sha1": "156c33e498739ded44973cf9d0c835309252c3b8"
+    },
+    {
+      "path": "static/images/feels_strong_man.png",
+      "sha1": "bc5298c1f15c591fb382a38abf8e7218789ebee7"
+    },
+    {
+      "path": "static/images/pepe_laugh.png",
+      "sha1": "46139f15fd203ddbd3c37ed5d2a71525d75d6f96"
+    }
+  ]
+}

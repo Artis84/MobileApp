@@ -1,0 +1,10 @@
+{
+    "imports": {
+        "oak": "https://deno.land/x/oak@v12.5.0/mod.ts",
+        "@firebase/firestore/lite": "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js",
+        "firebase/app": "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js",
+        "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
+        "denomailer": "https://deno.land/x/denomailer@1.6.0/mod.ts",
+        "dotenv": "https://deno.land/std@0.198.0/dotenv/mod.ts"
+    }
+}

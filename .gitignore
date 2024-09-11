@@ -39,6 +39,6 @@ yarn-error.log
 .metro-health-check*
 
 /database
-
-functions\crud-api\2023-07-09T13.17.49_76852
-functions\crud-api\*.log
+functions\auth\*.log
+/firebase-export-*
+*.log

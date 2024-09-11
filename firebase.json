@@ -1,8 +1,8 @@
 {
     "functions": [
         {
-            "source": "functions/crud-api",
-            "codebase": "crud-api"
+            "source": "functions/auth",
+            "codebase": "auth"
         }
     ],
     "firestore": {
